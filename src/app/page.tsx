@@ -2,8 +2,31 @@ import Image from "next/image";
 
 export default function Home() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      Hello World!
-    </div>
+    <main className="min-h-screen flex flex-col items-center justify-center gap-20">
+      <h1>Follow UP Helper</h1>
+      <section className="flex flex-wrap min-w-screen items-center justify-around">
+        <section className="flex flex-col gap-6">
+          <div>
+            <input type="checkbox" id="primeiroPasso" />
+            <label htmlFor="primeiroPasso">Passo 1</label>
+          </div>
+          <div>
+            <input type="checkbox" id="segundoPasso" />
+            <label htmlFor="segundoPasso">Passo 2</label>
+          </div>
+          <div>
+            <input type="checkbox" id="terceiroPasso" />
+            <label htmlFor="terceiroPasso">Passo 3</label>
+          </div>
+          <div>
+            <input type="checkbox" id="quartoPasso" />
+            <label htmlFor="quartoPasso">Passo 4</label>
+          </div>
+        </section>
+        <section>
+          <h2>Temporizador</h2>
+        </section>
+      </section>
+    </main>
   );
 }
