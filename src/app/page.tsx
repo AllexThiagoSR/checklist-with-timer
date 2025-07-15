@@ -1,21 +1,128 @@
 'use client'
-import { Tab, Tabs } from "@heroui/react";
+
+import { Button, Checkbox, Input, Tab, Tabs } from "@heroui/react";
+import { useCallback, useEffect, useState } from "react";
+
+type ChecklistItem = {
+  item: string;
+  checked: boolean;
+}
 
 export default function Home() {
+  const [list, setList] = useState<{ [key: string]: ChecklistItem }>({});
+  const [newItem, setNewItem] = useState<string>('');
+  
+  console.log(list);
+  
+  const generateAlphanumericHash = useCallback(
+    (length: number = 5) => {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      let hash = '';
+      for (let i = 0; i < length; i++) {
+        hash += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return hash;
+    },
+    []
+  )
+
+  useEffect(() => {
+    setList(JSON.parse(localStorage.getItem('list') || '{}'));
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('list', JSON.stringify(list));
+  }, [list])
+
   return (
-    <div>
-      <section className="h-full flex flex-col">
+    <div className="h-full w-full">
+      <section className="h-full flex flex-col bg-[#312F51] text-[#99AAB5]">
         <header className="flex justify-center p-4">
           <h1 className="text-6xl">Checklist With Timer</h1>
         </header>
-        <main className="p-10 grow">
-          <Tabs defaultSelectedKey="checklist" isVertical>
-            <Tab className="w-full h-full" key="checklist" title="Checklist"></Tab>
-            <Tab key="add-items" title="Add">Add</Tab>
+        <main className="p-10 px-16 grow">
+          <Tabs
+            defaultSelectedKey="checklist"
+            isVertical
+            classNames={{
+              tabList: 'bg-[#6253E92B]',
+              tabContent: 'text-white group-data-[selected=true]:text-[#99AAB5]',
+              cursor: 'bg-[#312F51]',
+              tabWrapper: 'h-full'
+            }}
+          >
+            <Tab className="w-full bg-[#6253E92B] flex flex-col items-center" key="checklist" title="Lista">
+              <ul>
+                {
+                  Object.entries(list).map(([id, checklistItem]) => (
+                    <li key={`${id}-item`}>
+                      <Checkbox
+                        color="secondary"
+                        classNames={{ label: "text-white" }}
+                        isSelected={list[id].checked}
+                        onValueChange={(isSelected) => {
+                          setList((previousList) => {
+                            previousList[id].checked = isSelected
+                            return {...previousList};
+                          })
+                        }}
+                      >
+                        {checklistItem.item}
+                      </Checkbox>
+                    </li>
+                  ))
+                }
+              </ul>
+              <Button
+                className="disabled"
+                color="secondary"
+                isDisabled={Object.values(list).some((item) => !item.checked)}
+                onPress={() => {
+                  setList((previousList) => {
+                    return Object
+                      .entries(previousList)
+                      .reduce(
+                        (acc: { [key: string]: ChecklistItem }, [id, { item }]) => {
+                          acc[id] = { item , checked: false }
+                          return acc;
+                        },
+                        {},
+                      )
+                  })
+                }}
+              >
+                Reiniciar lista
+              </Button>
+            </Tab>
+            <Tab className="w-full bg-[#6253E92B]" key="add-items" title="Adicionar itens">
+              <form
+                className="h-full w-full flex flex-col items-center justify-center gap-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const listItemsIds = Object.keys(list);
+                  let hash ='';
+
+                  do {
+                    hash = generateAlphanumericHash(10);
+                  } while(listItemsIds.includes(hash))
+
+                  setList((previousList) => ({...previousList, [hash]: { item: newItem, checked: false }}));
+                  setNewItem('');
+                }}
+              >
+                <Input
+                  className="max-w-[50%]"
+                  label="Novo item"
+                  value={newItem}
+                  onValueChange={(newValue) => setNewItem(newValue)}
+                />
+                <Button color="secondary" type="submit">Adicionar</Button>
+              </form>
+            </Tab>
           </Tabs>
         </main>
       </section>
-      <main className="min-h-screen flex flex-col items-center justify-center gap-20">
+      {/* <main className="min-h-screen flex flex-col items-center justify-center gap-20">
         <h1>Follow UP Helper</h1>
         <section className="flex flex-wrap min-w-screen items-center justify-around">
           <section className="flex flex-col gap-6">
@@ -40,7 +147,7 @@ export default function Home() {
             <h2>Temporizador</h2>
           </section>
         </section>
-      </main>
+      </main> */}
     </div>
   );
 }
