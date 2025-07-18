@@ -2,6 +2,7 @@
 
 import { Button, Checkbox, Input, Tab, Tabs } from "@heroui/react";
 import { useCallback, useEffect, useState } from "react";
+import { useStopwatch } from "react-timer-hook";
 
 type ChecklistItem = {
   item: string;
@@ -9,10 +10,17 @@ type ChecklistItem = {
 }
 
 export default function Home() {
+  const {
+    start,
+    pause,
+    reset,
+    hours,
+    minutes,
+    seconds,
+    isRunning
+  } = useStopwatch({ autoStart: false })
   const [list, setList] = useState<{ [key: string]: ChecklistItem }>({});
   const [newItem, setNewItem] = useState<string>('');
-  
-  console.log(list);
   
   const generateAlphanumericHash = useCallback(
     (length: number = 5) => {
@@ -26,13 +34,9 @@ export default function Home() {
     []
   )
 
-  useEffect(() => {
-    setList(JSON.parse(localStorage.getItem('list') || '{}'));
-  }, []);
+  useEffect(() => { setList(JSON.parse(localStorage.getItem('list') || '{}')); }, []);
 
-  useEffect(() => {
-    localStorage.setItem('list', JSON.stringify(list));
-  }, [list])
+  useEffect(() => { localStorage.setItem('list', JSON.stringify(list)); }, [list])
 
   return (
     <div className="h-full w-full">
@@ -52,23 +56,44 @@ export default function Home() {
             }}
           >
             <Tab className="w-full bg-[#6253E92B] flex flex-col items-center" key="checklist" title="Lista">
-              <ul>
+              <ul className="w-full flex flex-col items-center">
                 {
                   Object.entries(list).map(([id, checklistItem]) => (
-                    <li key={`${id}-item`}>
+                    <li key={`${id}-item`} className="flex w-[50%] justify-between items-center">
                       <Checkbox
                         color="secondary"
                         classNames={{ label: "text-white" }}
                         isSelected={list[id].checked}
                         onValueChange={(isSelected) => {
                           setList((previousList) => {
+                            if (Object.values(previousList).every((item) => !item.checked) && isSelected) {
+                              console.log('Inicia');
+                              
+                              start();
+                            }
+                            if (Object.values(list).every((item) => item.checked)) {
+                              console.log('Pausa');
+                              
+                              pause();
+                            }
                             previousList[id].checked = isSelected
                             return {...previousList};
-                          })
+                          });
                         }}
                       >
                         {checklistItem.item}
                       </Checkbox>
+                      <Button
+                        onPress={() => {
+                          reset(undefined, false);
+                          setList((previousList) => {
+                            const  { [id]: _, ...newValues } = previousList
+                            return {...newValues };
+                          });
+                        }}
+                      >
+                        Remover item
+                      </Button>
                     </li>
                   ))
                 }
@@ -76,8 +101,10 @@ export default function Home() {
               <Button
                 className="disabled"
                 color="secondary"
-                isDisabled={Object.values(list).some((item) => !item.checked)}
+                isDisabled={Object.values(list).length === 0 || Object.values(list).some((item) => !item.checked)}
                 onPress={() => {
+                  console.log('Pausou e resetou');
+                  reset(undefined, false);
                   setList((previousList) => {
                     return Object
                       .entries(previousList)
@@ -88,7 +115,7 @@ export default function Home() {
                         },
                         {},
                       )
-                  })
+                  });
                 }}
               >
                 Reiniciar lista
@@ -121,6 +148,9 @@ export default function Home() {
             </Tab>
           </Tabs>
         </main>
+        <footer className="flex items-center justify-center p-4">
+          <p className="text-white text-6xl">{`${hours < 10 ? '0' + hours: hours}:${minutes < 10 ? '0' + minutes: minutes}:${seconds < 10 ? '0' + seconds: seconds}`}</p>
+        </footer>
       </section>
       {/* <main className="min-h-screen flex flex-col items-center justify-center gap-20">
         <h1>Follow UP Helper</h1>
