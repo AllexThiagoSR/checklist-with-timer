@@ -7,6 +7,7 @@ import { useStopwatch } from "react-timer-hook";
 type ChecklistItem = {
   item: string;
   checked: boolean;
+  timeToCheck: number;
 }
 
 export default function Home() {
@@ -16,10 +17,10 @@ export default function Home() {
     reset,
     hours,
     minutes,
-    seconds,
-    isRunning
+    seconds
   } = useStopwatch({ autoStart: false })
   const [list, setList] = useState<{ [key: string]: ChecklistItem }>({});
+  const [lastCheckTime, setLastCheckTime] = useState(0)
   const [newItem, setNewItem] = useState<string>('');
   
   const generateAlphanumericHash = useCallback(
@@ -36,7 +37,15 @@ export default function Home() {
 
   useEffect(() => { setList(JSON.parse(localStorage.getItem('list') || '{}')); }, []);
 
-  useEffect(() => { localStorage.setItem('list', JSON.stringify(list)); }, [list])
+  useEffect(() => {
+    const listWithFalseCheckAndNoTime = Object
+      .entries(list)
+      .reduce((acc: { [key: string]: ChecklistItem }, [id, item]) => {
+        acc[id] = { ...item, checked: false, timeToCheck: 0 };
+        return acc;
+      }, {});
+    localStorage.setItem('list', JSON.stringify(listWithFalseCheckAndNoTime));
+  }, [list])
 
   return (
     <div className="h-full w-full">
@@ -58,34 +67,41 @@ export default function Home() {
             <Tab className="w-full bg-[#6253E92B] flex flex-col items-center" key="checklist" title="Lista">
               <ul className="w-full flex flex-col items-center">
                 {
-                  Object.entries(list).map(([id, checklistItem]) => (
-                    <li key={`${id}-item`} className="flex w-[50%] justify-between items-center">
+                  Object.entries(list).map(([id, checklistItem]) => {
+                    let timeCheck: string = '';
+                    if (checklistItem.timeToCheck !== 0) {
+                      let seconds = checklistItem.timeToCheck / 1000;
+                      const hours = Math.floor(seconds / 3600);
+                      seconds = seconds % 3600;
+                      const minutes = Math.floor(seconds / 60);
+                      seconds = Math.ceil(seconds % 60);
+                      timeCheck = `Marcação em: ${hours < 10 && '0' || ''}${hours}:${minutes < 10 && '0' || ''}${minutes}:${seconds < 10 && '0' || ''}${seconds}`;
+                    }
+                    return (<li key={`${id}-item`} className="flex w-[50%] justify-between items-center">
                       <Checkbox
                         color="secondary"
                         classNames={{ label: "text-white" }}
                         isSelected={list[id].checked}
                         onValueChange={(isSelected) => {
+                          const timeClickedToCheck = Date.now();
+                          const timeToCheck = timeClickedToCheck - lastCheckTime;
                           setList((previousList) => {
-                            if (Object.values(previousList).every((item) => !item.checked) && isSelected) {
-                              console.log('Inicia');
-                              
-                              start();
-                            }
-                            if (Object.values(list).every((item) => item.checked)) {
-                              console.log('Pausa');
-                              
-                              pause();
-                            }
+                            if (Object.values(previousList).every((item) => !item.checked) && isSelected) start();
+                            if (Object.values(list).every((item) => item.checked)) pause();
                             previousList[id].checked = isSelected
+                            if (lastCheckTime !== 0) previousList[id].timeToCheck = timeToCheck;
                             return {...previousList};
                           });
+                          setLastCheckTime(timeClickedToCheck);
                         }}
                       >
                         {checklistItem.item}
                       </Checkbox>
+                      <p className="text-white">{ timeCheck }</p>
                       <Button
                         onPress={() => {
                           reset(undefined, false);
+                          setLastCheckTime(0);
                           setList((previousList) => {
                             const  { [id]: _, ...newValues } = previousList
                             return {...newValues };
@@ -94,23 +110,23 @@ export default function Home() {
                       >
                         Remover item
                       </Button>
-                    </li>
-                  ))
+                    </li>)
+                  })
                 }
               </ul>
               <Button
                 className="disabled"
                 color="secondary"
-                isDisabled={Object.values(list).length === 0 || Object.values(list).some((item) => !item.checked)}
+                isDisabled={Object.values(list).length === 0 || Object.values(list).every((item) => !item.checked)}
                 onPress={() => {
-                  console.log('Pausou e resetou');
                   reset(undefined, false);
+                  setLastCheckTime(0);
                   setList((previousList) => {
                     return Object
                       .entries(previousList)
                       .reduce(
                         (acc: { [key: string]: ChecklistItem }, [id, { item }]) => {
-                          acc[id] = { item , checked: false }
+                          acc[id] = { item , checked: false, timeToCheck: 0 }
                           return acc;
                         },
                         {},
@@ -128,12 +144,8 @@ export default function Home() {
                   event.preventDefault();
                   const listItemsIds = Object.keys(list);
                   let hash ='';
-
-                  do {
-                    hash = generateAlphanumericHash(10);
-                  } while(listItemsIds.includes(hash))
-
-                  setList((previousList) => ({...previousList, [hash]: { item: newItem, checked: false }}));
+                  do hash = generateAlphanumericHash(10); while(listItemsIds.includes(hash))
+                  setList((previousList) => ({...previousList, [hash]: { item: newItem, checked: false, timeToCheck: 0 }}));
                   setNewItem('');
                 }}
               >
@@ -149,7 +161,7 @@ export default function Home() {
           </Tabs>
         </main>
         <footer className="flex items-center justify-center p-4">
-          <p className="text-white text-6xl">{`${hours < 10 ? '0' + hours: hours}:${minutes < 10 ? '0' + minutes: minutes}:${seconds < 10 ? '0' + seconds: seconds}`}</p>
+          <p className="text-white text-6xl">{`${hours < 10 && '0' || ''}${hours}:${minutes < 10 && '0' || ''}${minutes}:${seconds < 10 && '0' || ''}${seconds}`}</p>
         </footer>
       </section>
       {/* <main className="min-h-screen flex flex-col items-center justify-center gap-20">
