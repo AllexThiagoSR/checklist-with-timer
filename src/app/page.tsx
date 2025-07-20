@@ -22,6 +22,7 @@ export default function Home() {
   const [list, setList] = useState<{ [key: string]: ChecklistItem }>({});
   const [lastCheckTime, setLastCheckTime] = useState(0)
   const [newItem, setNewItem] = useState<string>('');
+  const [firtItemChecked, setFirstItemChecked] = useState('');
   
   const generateAlphanumericHash = useCallback(
     (length: number = 5) => {
@@ -64,53 +65,58 @@ export default function Home() {
               tabWrapper: 'h-full'
             }}
           >
-            <Tab className="w-full bg-[#6253E92B] flex flex-col items-center" key="checklist" title="Lista">
-              <ul className="w-full flex flex-col items-center">
+            <Tab className="w-full bg-[#6253E92B] flex flex-col items-center pt-4" key="checklist" title="Lista">
+              <ul className="w-full flex flex-col items-center gap-2">
                 {
                   Object.entries(list).map(([id, checklistItem]) => {
                     let timeCheck: string = '';
+                    if (id === firtItemChecked) timeCheck = 'Inicio';
                     if (checklistItem.timeToCheck !== 0) {
                       let seconds = checklistItem.timeToCheck / 1000;
                       const hours = Math.floor(seconds / 3600);
                       seconds = seconds % 3600;
                       const minutes = Math.floor(seconds / 60);
-                      seconds = Math.ceil(seconds % 60);
+                      seconds = Math.trunc(seconds % 60);
                       timeCheck = `Marcação em: ${hours < 10 && '0' || ''}${hours}:${minutes < 10 && '0' || ''}${minutes}:${seconds < 10 && '0' || ''}${seconds}`;
                     }
-                    return (<li key={`${id}-item`} className="flex w-[50%] justify-between items-center">
-                      <Checkbox
-                        color="secondary"
-                        classNames={{ label: "text-white" }}
-                        isSelected={list[id].checked}
-                        onValueChange={(isSelected) => {
-                          const timeClickedToCheck = Date.now();
-                          const timeToCheck = timeClickedToCheck - lastCheckTime;
-                          setList((previousList) => {
-                            if (Object.values(previousList).every((item) => !item.checked) && isSelected) start();
-                            if (Object.values(list).every((item) => item.checked)) pause();
-                            previousList[id].checked = isSelected
-                            if (lastCheckTime !== 0) previousList[id].timeToCheck = timeToCheck;
-                            return {...previousList};
-                          });
-                          setLastCheckTime(timeClickedToCheck);
-                        }}
-                      >
-                        {checklistItem.item}
-                      </Checkbox>
-                      <p className="text-white">{ timeCheck }</p>
-                      <Button
-                        onPress={() => {
-                          reset(undefined, false);
-                          setLastCheckTime(0);
-                          setList((previousList) => {
-                            const  { [id]: _, ...newValues } = previousList
-                            return {...newValues };
-                          });
-                        }}
-                      >
-                        Remover item
-                      </Button>
-                    </li>)
+                    return (
+                      <li key={`${id}-item`} className="flex w-[50%] justify-between items-center p-4 bg-[#312F51] rounded-lg">
+                        <Checkbox
+                          color="secondary"
+                          classNames={{ label: "text-white" }}
+                          isSelected={list[id].checked}
+                          onValueChange={(isSelected) => {
+                            const timeClickedToCheck = Date.now();
+                            const timeToCheck = timeClickedToCheck - lastCheckTime;
+                            setList((previousList) => {
+                              if (Object.values(previousList).every((item) => !item.checked) && isSelected) start();
+                              if (Object.values(list).every((item) => item.checked)) pause();
+                              previousList[id].checked = isSelected
+                              if (lastCheckTime === 0) setFirstItemChecked(id);
+                              if (lastCheckTime !== 0) previousList[id].timeToCheck = timeToCheck;
+                              return {...previousList};
+                            });
+                            setLastCheckTime(timeClickedToCheck);
+                          }}
+                        >
+                          {checklistItem.item}
+                        </Checkbox>
+                        <p className="text-white">{ timeCheck }</p>
+                        <Button
+                          color="secondary"
+                          onPress={() => {
+                            reset(undefined, false);
+                            setLastCheckTime(0);
+                            setList((previousList) => {
+                              const  { [id]: _, ...newValues } = previousList
+                              return {...newValues };
+                            });
+                          }}
+                        >
+                          Remover item
+                        </Button>
+                      </li>
+                    )
                   })
                 }
               </ul>
@@ -121,6 +127,7 @@ export default function Home() {
                 onPress={() => {
                   reset(undefined, false);
                   setLastCheckTime(0);
+                  setFirstItemChecked('');
                   setList((previousList) => {
                     return Object
                       .entries(previousList)
